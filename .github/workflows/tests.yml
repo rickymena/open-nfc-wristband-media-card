@@ -1,0 +1,29 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # The web UI's JavaScript is executed against a stub DOM; without node
+      # those tests skip rather than fail.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # No pyscard and no reader needed: the NDEF, tag-layout, lock-mask and
+      # APDU-construction logic is deliberately kept free of the pyscard import
+      # so it can be tested anywhere.
+      - run: python -m unittest discover -s tests -v
+        env:
+          PYTHONPATH: src

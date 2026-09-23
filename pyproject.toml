@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wristband"
+version = "0.1.0"
+description = "Open source NFC wristband encoder - write URLs to NTAG213/215/216 tags with any PC/SC reader"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+keywords = ["nfc", "ntag213", "ndef", "pcsc", "wristband", "rfid", "smartcard"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Topic :: System :: Hardware",
+]
+dependencies = ["pyscard>=2.0"]
+
+[project.urls]
+Homepage = "https://github.com/rickymena/open-nfc-wristband-media-card"
+Issues = "https://github.com/rickymena/open-nfc-wristband-media-card/issues"
+
+[project.scripts]
+wristband = "wristband.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"wristband.web" = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

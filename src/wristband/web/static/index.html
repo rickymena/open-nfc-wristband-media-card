@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NFC Tag Writer</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>NFC Tag Writer</h1>
+  <div id="reader" class="reader">connecting...</div>
+</header>
+
+<main>
+  <section class="panel" id="tagPanel" aria-live="polite">
+    <div class="status">
+      <span class="dot" id="dot"></span>
+      <span id="statusText">Waiting for a reader...</span>
+    </div>
+    <dl class="facts" id="facts" hidden>
+      <div><dt>UID</dt><dd id="uid">-</dd></div>
+      <div><dt>Chip</dt><dd id="product">-</dd></div>
+      <div><dt>Capacity</dt><dd id="capacity">-</dd></div>
+      <div><dt>Access</dt><dd id="access">-</dd></div>
+    </dl>
+    <div id="contentBox" hidden>
+      <h2>Currently on the tag</h2>
+      <pre id="content"></pre>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Write a URL</h2>
+    <form id="writeForm" autocomplete="off">
+      <label for="url">URL</label>
+      <input type="url" id="url" name="url" placeholder="https://example.com/me" required>
+
+      <label for="ref">Path suffix <span class="hint">optional - for click attribution</span></label>
+      <input type="text" id="ref" name="ref" placeholder="nfc">
+
+      <label for="title">Title <span class="hint">optional - Android only</span></label>
+      <input type="text" id="title" name="title" placeholder="Leave blank for best compatibility">
+      <p class="warn" id="titleWarn" hidden>
+        A title requires a Smart Poster record. <strong>iPhones ignore Smart
+        Posters entirely</strong> and will show no notification. Android is fine.
+      </p>
+
+      <div class="actions">
+        <button type="submit" id="writeBtn" disabled>Write tag</button>
+        <button type="button" id="lockBtn" class="secondary" disabled>Soft lock</button>
+        <button type="button" id="unlockBtn" class="secondary" disabled>Unlock</button>
+      </div>
+    </form>
+    <div id="result" class="result" hidden></div>
+  </section>
+
+  <section class="panel" id="configPanel" hidden>
+    <h2>Chip configuration</h2>
+    <dl class="facts" id="cfgFacts">
+      <div><dt>Silicon</dt><dd id="cfgSilicon">-</dd></div>
+      <div><dt>ASCII mirror</dt><dd id="cfgMirror">-</dd></div>
+      <div><dt>NFC counter</dt><dd id="cfgCounter">-</dd></div>
+      <div><dt>Password</dt><dd id="cfgPassword">-</dd></div>
+      <div><dt>Config lock</dt><dd id="cfgLock">-</dd></div>
+    </dl>
+
+    <details class="adv">
+      <summary>ASCII mirror - one tag, a unique URL per scan</summary>
+      <p class="note">The chip substitutes its UID and/or read counter into the
+        data it returns, so identical tags resolve to different URLs. Write a
+        URL containing a placeholder of exactly the right width, then point the
+        mirror at it.</p>
+      <label for="mirrorMode">Mode</label>
+      <select id="mirrorMode">
+        <option value="off">off</option>
+        <option value="uid">uid - 14 characters</option>
+        <option value="counter">counter - 6 characters</option>
+        <option value="both">both - 21 characters</option>
+      </select>
+      <div class="row">
+        <div>
+          <label for="mirrorPage">Page</label>
+          <input type="number" id="mirrorPage" min="4" max="225" value="4">
+        </div>
+        <div>
+          <label for="mirrorByte">Byte</label>
+          <input type="number" id="mirrorByte" min="0" max="3" value="0">
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="mirrorCalcBtn" class="secondary">Locate from URL above</button>
+        <button type="button" id="mirrorBtn">Apply mirror</button>
+      </div>
+    </details>
+
+    <details class="adv">
+      <summary>NFC read counter</summary>
+      <p class="note">A 3-byte counter that increments on the first read after
+        each power-on. Mirror it into a URL to get a scan count with no
+        server-side state.</p>
+      <div class="actions">
+        <button type="button" id="counterOnBtn">Enable counter</button>
+        <button type="button" id="counterOffBtn" class="secondary">Disable</button>
+      </div>
+    </details>
+
+    <details class="adv">
+      <summary>Password protection</summary>
+      <p class="warn" id="authWarn" hidden>
+        This reader <strong>cannot send PWD_AUTH</strong>. A password can be
+        written but never used, which would make the tag permanently
+        unwritable here. Tick the override only if you understand that.
+      </p>
+      <div class="row">
+        <div>
+          <label for="pwd">Password <span class="hint">4 bytes hex</span></label>
+          <input type="text" id="pwd" placeholder="DEADBEEF" maxlength="8">
+        </div>
+        <div>
+          <label for="pack">Pack <span class="hint">2 bytes</span></label>
+          <input type="text" id="pack" placeholder="1122" maxlength="4">
+        </div>
+      </div>
+      <label for="auth0">First protected page <span class="hint">4 protects everything; 255 disables</span></label>
+      <input type="number" id="auth0" min="0" max="255" value="4">
+      <label class="check"><input type="checkbox" id="protectReads"> Protect reads as well as writes</label>
+      <label class="check"><input type="checkbox" id="acceptLockout"> I accept that this may be irreversible</label>
+      <div class="actions">
+        <button type="button" id="pwdSetBtn">Set password</button>
+        <button type="button" id="pwdOffBtn" class="secondary">Disable protection</button>
+      </div>
+    </details>
+
+    <div id="cfgResult" class="result" hidden></div>
+  </section>
+
+  <section class="panel">
+    <h2>History</h2>
+    <p class="note">Every write, lock and configuration change, appended to a
+      JSON Lines file. Passwords are never recorded.</p>
+    <div class="actions">
+      <button type="button" id="historyBtn" class="secondary">Refresh</button>
+      <button type="button" id="historyMineBtn" class="secondary">This tag only</button>
+    </div>
+    <pre id="historyOut">Not loaded yet.</pre>
+    <p class="note" id="historyPath"></p>
+  </section>
+</main>
+
+<footer>
+  <p>Plain URI records are written by default - the only layout that works
+     on both iOS and Android. Soft locking sets the capability container
+     read-only: phones refuse to write, this reader still can. On genuine NXP
+     silicon that flag is <strong>one-time programmable and cannot be
+     cleared</strong>; clone chips often allow Unlock to reverse it. Either way
+     the result is verified by reading the byte back.</p>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

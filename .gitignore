@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Test and lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Node, used only by the web UI tests
+node_modules/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Credentials. Nothing here should ever need one, which is the point.
+.env
+.env.*
+*.pem
+*.key
+secrets.*
+
+# Personal tag records. These hold UIDs, what was written to which tag, and
+# the URLs behind them. Useful locally, not for publishing.
+MY-TAGS.txt
+*-TAGS.txt
+MY-BRACELET.txt
+*-BRACELET.txt
+
+# Audit logs. Same reasoning: a history of real tags and real URLs.
+audit/
+audit.jsonl
+*.audit.jsonl
+
+# Container artefacts
+*.tar
+*.tar.gz

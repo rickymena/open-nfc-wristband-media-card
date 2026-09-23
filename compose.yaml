@@ -1,0 +1,36 @@
+# podman-compose up   (or: docker compose up)
+#
+# The container does not get the USB device. It talks to the host's pcscd
+# over its socket, which keeps the container unprivileged.
+services:
+  wristband:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/wristband:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      # Host pcscd socket. Mode is srw-rw-rw-, so the container's non-root
+      # user can use it without any capability grants.
+      - /run/pcscd/pcscd.comm:/run/pcscd/pcscd.comm
+      # Audit log, kept outside the container so it survives a rebuild.
+      - ./audit:/data
+    environment:
+      WRISTBAND_AUDIT_LOG: /data/audit.jsonl
+    # Rootless podman maps the host user to container root, but the process
+    # runs as uid 10001, so a bind-mounted volume would be read-only to it.
+    # This maps the host user onto that uid instead.
+    userns_mode: "keep-id:uid=10001,gid=10001"
+    security_opt:
+      # The socket is labelled pcscd_var_run_t on the host. Relabelling it
+      # with :z would change the HOST's label and can break the daemon, so
+      # disable SELinux confinement for this container instead.
+      - label=disable
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz',timeout=2).status==200 else 1)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+    restart: unless-stopped
