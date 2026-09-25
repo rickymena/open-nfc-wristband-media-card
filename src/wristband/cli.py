@@ -191,6 +191,8 @@ def cmd_write_url(args) -> int:
         url = url.rstrip("/") + "/" + args.ref.lstrip("/")
     if "://" not in url and not url.startswith(("tel:", "mailto:")):
         return _fail(f"{url!r} has no scheme -- did you mean https://{url}?")
+    if any(c.isspace() for c in url):
+        return _fail(f"{url!r} contains spaces -- use %20 or a hyphen instead.")
 
     icon = None
     icon_mime = "image/png"
@@ -622,7 +624,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="image to embed in the Smart Poster. Needs an NTAG215/216, and "
              "breaks iPhone detection -- see docs/COMPATIBILITY.md",
     )
-    w.add_argument("--force", action="store_true", help="format the tag first if needed")
+    w.add_argument(
+        "--force", action="store_true",
+        help="format the tag first if needed, or rewrite a soft-locked tag",
+    )
     w.add_argument(
         "--count", type=int, default=1, metavar="N",
         help="write N tags in a row, swapping each one out; 0 means keep "
@@ -633,7 +638,8 @@ def build_parser() -> argparse.ArgumentParser:
     t = sub.add_parser("write-text", help="write a plain text record")
     t.add_argument("text")
     t.add_argument("--lang", default="en")
-    t.add_argument("--force", action="store_true")
+    t.add_argument("--force", action="store_true",
+                   help="format the tag first if needed, or rewrite a soft-locked tag")
     t.add_argument("--count", type=int, default=1, metavar="N",
                    help="write N tags in a row; 0 means until Ctrl-C")
     t.set_defaults(func=cmd_write_text)

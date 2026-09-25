@@ -45,6 +45,7 @@ from .. import audit
 from ..writer import (
     build_text_payload,
     build_url_payload,
+    hard_locked,
     read_records,
     soft_lock,
     soft_unlock,
@@ -168,6 +169,15 @@ class TagMonitor:
                 except Exception:
                     pass
 
+            # Soft-locked tags can still be rewritten from here; hard-locked
+            # ones cannot. The page needs to know which.
+            locked_hard = False
+            if info.formatted and not info.writable:
+                try:
+                    locked_hard = hard_locked(rd, info)
+                except Exception:
+                    locked_hard = True
+
             return {
                 **base,
                 "present": True,
@@ -182,6 +192,7 @@ class TagMonitor:
                 "capacity": info.capacity,
                 "formatted": info.formatted,
                 "writable": info.writable,
+                "hardLocked": locked_hard,
                 "records": records,
             }
         except Exception as exc:
@@ -285,6 +296,8 @@ class TagMonitor:
                     ref = (body.get("ref") or "").strip()
                     if ref:
                         url = url.rstrip("/") + "/" + ref.lstrip("/")
+                    if any(c.isspace() for c in url):
+                        return {"ok": False, "message": f"{url!r} contains spaces."}
                     title = (body.get("title") or "").strip() or None
                     payload = build_url_payload(url, title)
                     result = write_ndef(rd, info, payload, force=bool(body.get("force")))

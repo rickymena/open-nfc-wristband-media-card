@@ -20,7 +20,15 @@ from .ndef import (
     uri_record,
     wrap_tlv,
 )
-from .tags import CC_PAGE, FIRST_USER_PAGE, PAGE_SIZE, blank_cc
+from .tags import (
+    CC_PAGE,
+    DYNAMIC_LOCK,
+    FIRST_USER_PAGE,
+    PAGE_SIZE,
+    STATIC_LOCK_MASK,
+    STATIC_LOCK_PAGE,
+    blank_cc,
+)
 
 
 @dataclass
@@ -69,6 +77,19 @@ def read_records(rd, info) -> list[str]:
         return []
 
 
+def hard_locked(rd, info) -> bool:
+    """True if any of the lock bits that `wristband lock` sets are set."""
+    static = rd.read_pages(STATIC_LOCK_PAGE, 1)
+    if static[2] & STATIC_LOCK_MASK[0] or static[3] & STATIC_LOCK_MASK[1]:
+        return True
+    entry = DYNAMIC_LOCK.get(info.product)
+    if entry is None:
+        return True  # unknown lock layout, so do not guess
+    page, mask0, mask1 = entry
+    dynamic = rd.read_pages(page, 1)
+    return bool(dynamic[0] & mask0 or dynamic[1] & mask1)
+
+
 def write_ndef(rd, info, payload: bytes, *, force: bool = False) -> WriteResult:
     """Write a TLV-wrapped payload into user memory and verify by reading back."""
     notes: list[str] = []
@@ -84,9 +105,17 @@ def write_ndef(rd, info, payload: bytes, *, force: bool = False) -> WriteResult:
         notes.append("Wrote a capability container (NTAG213 layout).")
 
     if not info.writable:
-        return WriteResult(
-            False, "Tag is locked read-only; its contents can no longer be changed."
-        )
+        # The CC flag only stops phones. Unless the lock bits are set too,
+        # the data pages still accept writes from a PC/SC reader.
+        if not force:
+            return WriteResult(
+                False, "Tag is soft-locked. Retry with force to rewrite it."
+            )
+        if hard_locked(rd, info):
+            return WriteResult(
+                False, "Tag is hard-locked; its contents can no longer be changed."
+            )
+        notes.append("Tag is soft-locked. Phones still cannot write it.")
 
     total_pages = info.capacity // PAGE_SIZE
     existing = rd.read_pages(FIRST_USER_PAGE, total_pages)

@@ -65,7 +65,9 @@ one lock, because a card connection is exclusive.
 | `POST` | `/api/mirror`, `/api/counter`, `/api/password` | configuration |
 
 `genuine` in a state snapshot is byte 0 of the UID: `04` is NXP, anything else
-is a clone.
+is a clone. `hardLocked` is true when the tag's lock bits are set; a tag with
+`writable: false` and `hardLocked: false` is soft-locked and accepts a write
+with `force`. See [LOCKING.md](LOCKING.md).
 
 ## Audit log
 
@@ -90,6 +92,8 @@ redacted where the entry is built.
 
 - A title warns that it forces a Smart Poster record, which iPhones ignore.
 - Locking asks for confirmation and says plainly that it cannot be undone.
+- Rewriting a soft-locked tag asks for confirmation first.
+- URLs containing spaces are rejected before anything is written.
 - Every write is read back and compared before it reports success.
 
 ## Image notes

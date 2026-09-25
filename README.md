@@ -109,6 +109,8 @@ user. See [docs/WEBUI.md](docs/WEBUI.md).
 - Locking cannot be undone. `lock --soft` stops phones writing; `lock` sets the
   hardware lock bits and is final. The capability container is one-time
   programmable, so even the soft flag can never be cleared on genuine NXP.
+  A soft-locked tag can still be rewritten here with `--force`.
+  [Details](docs/LOCKING.md)
 - NFC does not work through metal. A sticker that reads on a desk goes dead on
   a laptop lid. That needs an on-metal tag with a ferrite layer.
 
@@ -141,6 +143,7 @@ gets the public one.
 | [HARDWARE.md](docs/HARDWARE.md) | Readers, tags, the 16-byte write quirk, troubleshooting |
 | [PROTOCOL.md](docs/PROTOCOL.md) | Byte-level walkthrough of a tag's memory |
 | [MIRRORING.md](docs/MIRRORING.md) | ASCII mirroring and the NFC counter |
+| [LOCKING.md](docs/LOCKING.md) | Soft and hard locks, and rewriting a soft-locked tag |
 | [PASSWORD.md](docs/PASSWORD.md) | Password protection and the lockout guard |
 | [WEBUI.md](docs/WEBUI.md) | Container, HTTP API, audit log |
 
@@ -167,7 +170,7 @@ cannot run into the lock pages and brick a tag.
 PYTHONPATH=src python -m unittest discover -s tests
 ```
 
-154 tests. No reader, tag or `pyscard` required. CI runs 3.9, 3.11 and 3.13.
+159 tests. No reader, tag or `pyscard` required. CI runs 3.9, 3.11 and 3.13.
 
 ## Contributing
 

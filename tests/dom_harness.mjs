@@ -51,6 +51,8 @@ const present = {
   },
 };
 const clone = { ...present, genuine: false, uid: "53:77:C2:74:A3:00:01", config: null };
+const softLocked = { ...present, writable: false, hardLocked: false };
+const hardLocked = { ...present, writable: false, hardLocked: true };
 const errored = { ...idle, error: "No PC/SC reader found." };
 
 for (const [name, state] of [["idle", idle], ["present", present],
@@ -58,6 +60,20 @@ for (const [name, state] of [["idle", idle], ["present", present],
   try { source.onmessage({ data: JSON.stringify(state) }); }
   catch (e) { fail(`render:${name}`, e); }
 }
+
+// Write stays enabled on a soft-locked tag. Lock does not, and neither does
+// anything on a hard-locked one.
+const expectButtons = (name, state, write, lock) => {
+  try { source.onmessage({ data: JSON.stringify(state) }); }
+  catch (e) { fail(`render:${name}`, e); }
+  const w = nodes.get("writeBtn"), l = nodes.get("lockBtn");
+  if (w.disabled !== !write || l.disabled !== !lock) {
+    fail(name, new Error(`write disabled=${w.disabled}, lock disabled=${l.disabled}`));
+  }
+};
+expectButtons("soft-locked", softLocked, true, false);
+expectButtons("hard-locked", hardLocked, false, false);
+expectButtons("writable", present, true, true);
 
 try { source.onerror(); } catch (e) { fail("onerror", e); }
 

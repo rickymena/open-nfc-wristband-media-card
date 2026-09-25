@@ -35,11 +35,17 @@ el.title.addEventListener("input", () => {
   el.titleWarn.hidden = el.title.value.trim() === "";
 });
 
+// Phones refuse to write a soft-locked tag, but the reader still can.
+function softLocked() {
+  return tag.present && tag.formatted && !tag.writable && !tag.hardLocked;
+}
+
 function setButtons() {
   const ready = tag.present && !busy;
-  el.writeBtn.disabled = !ready || !tag.writable;
+  el.writeBtn.disabled = !ready || !(tag.writable || softLocked());
   el.lockBtn.disabled = !ready || !tag.writable;
-  el.writeBtn.textContent = busy ? "Writing..." : "Write tag";
+  el.writeBtn.textContent = busy ? "Writing..."
+    : softLocked() ? "Rewrite soft-locked tag" : "Write tag";
   for (const b of [el.mirrorBtn, el.counterOnBtn, el.counterOffBtn,
                    el.pwdSetBtn, el.pwdOffBtn]) {
     b.disabled = !ready || !tag.writable;
@@ -127,7 +133,9 @@ function render(state) {
       ? `${state.capacity} bytes` : "not NDEF-formatted";
     el.access.innerHTML = state.writable
       ? "read/write"
-      : 'read-only <span class="badge locked">locked</span>';
+      : state.hardLocked
+        ? 'read-only <span class="badge locked">locked</span>'
+        : 'read-only to phones <span class="badge locked">soft lock</span>';
   }
 
   renderConfig(state);
@@ -190,10 +198,16 @@ async function post(action, body) {
 
 el.form.addEventListener("submit", (e) => {
   e.preventDefault();
+  const force = softLocked();
+  if (force && !confirm(
+      "Rewrite this soft-locked tag?\n\n" +
+      "This replaces what is on it. It stays read-only to phones."
+  )) return;
   post("write-url", {
     url: el.url.value.trim(),
     ref: el.ref.value.trim(),
     title: el.title.value.trim(),
+    force,
   });
 });
 
